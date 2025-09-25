@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}PPT AI Analyzer - Upload Presentation{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <!-- Hero Section -->
+        <div class="text-center mb-5">
+            <h1 class="display-4 mb-3">
+                <i class="fas fa-magic text-primary"></i>
+                PPT AI Analyzer
+            </h1>
+            <p class="lead text-muted">
+                Unlock deep insights from your PowerPoint presentations with AI-powered analysis
+            </p>
+        </div>
+
+        <!-- Features -->
+        <div class="row mb-5">
+            <div class="col-md-4 text-center mb-4">
+                <div class="feature-card p-4 h-100 border rounded-3 shadow-sm">
+                    <i class="fas fa-palette fa-3x text-primary mb-3"></i>
+                    <h5>Color Analysis</h5>
+                    <p class="text-muted">Extract and analyze color palettes, dominant colors, and color psychology insights</p>
+                </div>
+            </div>
+            <div class="col-md-4 text-center mb-4">
+                <div class="feature-card p-4 h-100 border rounded-3 shadow-sm">
+                    <i class="fas fa-images fa-3x text-success mb-3"></i>
+                    <h5>Image Detection</h5>
+                    <p class="text-muted">Identify images, analyze visual content, and extract image properties</p>
+                </div>
+            </div>
+            <div class="col-md-4 text-center mb-4">
+                <div class="feature-card p-4 h-100 border rounded-3 shadow-sm">
+                    <i class="fas fa-brain fa-3x text-info mb-3"></i>
+                    <h5>AI Insights</h5>
+                    <p class="text-muted">Get intelligent analysis of content, design quality, and improvement suggestions</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload Form -->
+        <div class="upload-section bg-light p-5 rounded-3 shadow">
+            <h3 class="text-center mb-4">
+                <i class="fas fa-upload"></i> Upload Your Presentation
+            </h3>
+            
+            <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data" id="uploadForm">
+                <div class="upload-area border-dashed border-3 p-5 text-center rounded-3 mb-3" id="uploadArea">
+                    <i class="fas fa-cloud-upload-alt fa-4x text-muted mb-3"></i>
+                    <h5 class="mb-3">Drop your PowerPoint file here or click to browse</h5>
+                    <p class="text-muted mb-3">Supports .pptx and .ppt files up to 50MB</p>
+                    
+                    <input type="file" name="file" id="fileInput" accept=".pptx,.ppt" class="d-none" required>
+                    <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('fileInput').click()">
+                        <i class="fas fa-folder-open"></i> Choose File
+                    </button>
+                </div>
+                
+                <div id="fileInfo" class="mb-3" style="display: none;">
+                    <div class="alert alert-info">
+                        <i class="fas fa-file-powerpoint"></i>
+                        <span id="fileName"></span>
+                        <span id="fileSize" class="text-muted"></span>
+                    </div>
+                </div>
+                
+                <div class="text-center">
+                    <button type="submit" class="btn btn-primary btn-lg" id="uploadBtn" disabled>
+                        <i class="fas fa-magic"></i> Analyze Presentation
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- What We Analyze -->
+        <div class="mt-5">
+            <h3 class="text-center mb-4">What We Analyze</h3>
+            <div class="row">
+                <div class="col-md-6">
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i> Slide layouts and structure</li>
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i> Text content and formatting</li>
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i> Font usage and typography</li>
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i> Color schemes and palettes</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i> Image properties and dominant colors</li>
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i> Design quality assessment</li>
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i> Content organization analysis</li>
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i> AI-powered recommendations</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div class="modal fade" id="loadingModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center p-5">
+                <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <h5>Analyzing Your Presentation</h5>
+                <p class="text-muted">This may take a few moments...</p>
+                <div class="progress mt-3">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%" id="progressBar"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('fileInput');
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInfo = document.getElementById('fileInfo');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const uploadForm = document.getElementById('uploadForm');
+    const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+
+    // Drag and drop functionality
+    uploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        uploadArea.classList.add('drag-over');
+    });
+
+    uploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('drag-over');
+    });
+
+    uploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('drag-over');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            handleFileSelect(files[0]);
+        }
+    });
+
+    fileInput.addEventListener('change', function(e) {
+        if (e.target.files.length > 0) {
+            handleFileSelect(e.target.files[0]);
+        }
+    });
+
+    function handleFileSelect(file) {
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        
+        fileName.textContent = file.name;
+        fileSize.textContent = `(${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+        
+        fileInfo.style.display = 'block';
+        uploadBtn.disabled = false;
+        
+        // Validate file type
+        const validTypes = ['.pptx', '.ppt'];
+        const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+        
+        if (!validTypes.includes(fileExtension)) {
+            alert('Please select a valid PowerPoint file (.pptx or .ppt)');
+            fileInput.value = '';
+            fileInfo.style.display = 'none';
+            uploadBtn.disabled = true;
+        }
+    }
+
+    // Show loading modal on form submit
+    uploadForm.addEventListener('submit', function() {
+        loadingModal.show();
+        
+        // Simulate progress
+        let progress = 0;
+        const progressBar = document.getElementById('progressBar');
+        const interval = setInterval(function() {
+            progress += Math.random() * 15;
+            if (progress > 90) progress = 90;
+            progressBar.style.width = progress + '%';
+        }, 500);
+        
+        // Clear interval after 30 seconds
+        setTimeout(() => clearInterval(interval), 30000);
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+
+{% block title %}Analysis Results - {{ filename }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="mb-1">
+                    <i class="fas fa-chart-line text-primary"></i>
+                    Analysis Results
+                </h1>
+                <p class="text-muted mb-0">
+                    <i class="fas fa-file-powerpoint"></i> {{ filename }}
+                </p>
+            </div>
+            <a href="{{ url_for('index') }}" class="btn btn-outline-primary">
+                <i class="fas fa-upload"></i> Analyze Another
+            </a>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3 mb-3">
+                <div class="card bg-primary text-white h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-presentation fa-2x mb-2"></i>
+                        <h3 class="mb-1">{{ result.summary_stats.slides.total }}</h3>
+                        <p class="mb-0">Total Slides</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card bg-success text-white h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-images fa-2x mb-2"></i>
+                        <h3 class="mb-1">{{ result.summary_stats.content.total_images }}</h3>
+                        <p class="mb-0">Images</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card bg-info text-white h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-palette fa-2x mb-2"></i>
+                        <h3 class="mb-1">{{ result.summary_stats.content.unique_colors }}</h3>
+                        <p class="mb-0">Unique Colors</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card bg-warning text-white h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-font fa-2x mb-2"></i>
+                        <h3 class="mb-1">{{ result.summary_stats.content.unique_fonts }}</h3>
+                        <p class="mb-0">Unique Fonts</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Insights -->
+        {% if result.ai_insights and not result.ai_insights.error %}
+        <div class="card mb-4">
+            <div class="card-header bg-gradient-primary text-white">
+                <h4 class="mb-0">
+                    <i class="fas fa-brain"></i> AI Insights
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- Scores -->
+                    <div class="col-md-4 mb-3">
+                        <h6>Quality Scores</h6>
+                        <div class="mb-2">
+                            <small>Design Quality</small>
+                            <div class="progress">
+                                <div class="progress-bar bg-primary" style="width: {{ result.ai_insights.design_score * 10 }}%">
+                                    {{ result.ai_insights.design_score }}/10
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <small>Content Quality</small>
+                            <div class="progress">
+                                <div class="progress-bar bg-success" style="width: {{ result.ai_insights.content_score * 10 }}%">
+                                    {{ result.ai_insights.content_score }}/10
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <small>Professional Quality</small>
+                            <div class="progress">
+                                <div class="progress-bar bg-info" style="width: {{ result.ai_insights.professional_score * 10 }}%">
+                                    {{ result.ai_insights.professional_score }}/10
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Topic and Type -->
+                    <div class="col-md-4 mb-3">
+                        <h6>Presentation Analysis</h6>
+                        <p><strong>Topic:</strong> {{ result.ai_insights.presentation_topic }}</p>
+                        <p><strong>Type:</strong> {{ result.ai_insights.summary.presentation_type }}</p>
+                        <p><strong>Color Diversity:</strong> 
+                            <span class="badge bg-{{ 'success' if result.summary_stats.design.color_diversity == 'High' else 'warning' if result.summary_stats.design.color_diversity == 'Medium' else 'danger' }}">
+                                {{ result.summary_stats.design.color_diversity }}
+                            </span>
+                        </p>
+                    </div>
+                    
+                    <!-- Key Insights -->
+                    <div class="col-md-4 mb-3">
+                        <h6>Key Insights</h6>
+                        {% if result.ai_insights.key_insights %}
+                            <ul class="list-unstyled">
+                                {% for insight in result.ai_insights.key_insights[:3] %}
+                                <li class="mb-1">
+                                    <i class="fas fa-lightbulb text-warning"></i>
+                                    <small>{{ insight }}</small>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Full Analysis -->
+                <div class="mt-3">
+                    <button class="btn btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#fullAnalysis">
+                        <i class="fas fa-expand"></i> View Full AI Analysis
+                    </button>
+                    <div class="collapse mt-3" id="fullAnalysis">
+                        <div class="bg-light p-3 rounded">
+                            <pre style="white-space: pre-wrap;">{{ result.ai_insights.raw_analysis }}</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Color Palette -->
+        {% if result.detailed_analysis.global_analysis.color_palette %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-palette"></i> Color Palette
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="color-palette-container">
+                    {% for color in result.detailed_analysis.global_analysis.color_palette[:20] %}
+                        {% if color %}
+                        <div class="color-swatch" style="background-color: {{ color }};" title="{{ color }}" data-color="{{ color }}">
+                            <span class="color-code">{{ color }}</span>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Slides Overview -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-images"></i> Slides Overview
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Slide</th>
+                                <th>Layout</th>
+                                <th>Text Elements</th>
+                                <th>Images</th>
+                                <th>Colors</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for slide in result.detailed_analysis.slides %}
+                            <tr>
+                                <td>
+                                    <strong>{{ slide.slide_number }}</strong>
+                                </td>
+                                <td>{{ slide.layout }}</td>
+                                <td>
+                                    <span class="badge bg-primary">{{ slide.text_count }}</span>
+                                </td>
+                                <td>
+                                    {% if slide.image_count > 0 %}
+                                        <span class="badge bg-success">{{ slide.image_count }}</span>
+                                    {% else %}
+                                        <span class="text-muted">None</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="color-mini-palette">
+                                        {% for color in slide.colors[:5] %}
+                                            {% if color %}
+                                            <div class="color-mini-swatch" style="background-color: {{ color }};" title="{{ color }}"></div>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('slide_detail', filename=filename, slide_number=slide.slide_number) }}" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i> View Details
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fonts Used -->
+        {% if result.detailed_analysis.global_analysis.fonts_used %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-font"></i> Fonts Used
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for font in result.detailed_analysis.global_analysis.fonts_used %}
+                    <div class="col-md-3 mb-2">
+                        <div class="border rounded p-2 text-center" style="font-family: '{{ font }}', sans-serif;">
+                            {{ font }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Presentation Metadata -->
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-info-circle"></i> Presentation Details
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Dimensions</h6>
+                        <p>{{ result.detailed_analysis.presentation_info.slide_dimensions.width_inches|round(2) }}" × {{ result.detailed_analysis.presentation_info.slide_dimensions.height_inches|round(2) }}" 
+                           ({{ result.detailed_analysis.presentation_info.slide_dimensions.aspect_ratio }} aspect ratio)</p>
+                        
+                        <h6>Statistics</h6>
+                        <ul class="list-unstyled">
+                            <li>Slides with images: {{ result.summary_stats.slides.with_images }}</li>
+                            <li>Text-heavy slides: {{ result.summary_stats.slides.text_heavy }}</li>
+                            <li>Visual-heavy slides: {{ result.summary_stats.slides.visual_heavy }}</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Design Assessment</h6>
+                        <ul class="list-unstyled">
+                            <li>Color diversity: 
+                                <span class="badge bg-{{ 'success' if result.summary_stats.design.color_diversity == 'High' else 'warning' if result.summary_stats.design.color_diversity == 'Medium' else 'danger' }}">
+                                    {{ result.summary_stats.design.color_diversity }}
+                                </span>
+                            </li>
+                            <li>Font consistency: 
+                                <span class="badge bg-{{ 'success' if result.summary_stats.design.font_consistency == 'Good' else 'warning' if result.summary_stats.design.font_consistency == 'Moderate' else 'danger' }}">
+                                    {{ result.summary_stats.design.font_consistency }}
+                                </span>
+                            </li>
+                            <li>Layout variety: {{ result.summary_stats.design.layout_variety }} different layouts</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Color swatch click handler
+    document.querySelectorAll('.color-swatch').forEach(function(swatch) {
+        swatch.addEventListener('click', function() {
+            const color = this.dataset.color;
+            navigator.clipboard.writeText(color).then(function() {
+                // Show tooltip
+                const tooltip = new bootstrap.Tooltip(swatch, {
+                    title: 'Copied to clipboard!',
+                    trigger: 'manual'
+                });
+                tooltip.show();
+                setTimeout(() => tooltip.hide(), 1000);
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

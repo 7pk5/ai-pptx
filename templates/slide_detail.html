@@ -1,0 +1,290 @@
+{% extends "base.html" %}
+
+{% block title %}Slide {{ slide.slide_number }} Details{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="mb-1">
+                    <i class="fas fa-presentation"></i>
+                    Slide {{ slide.slide_number }} Details
+                </h1>
+                <p class="text-muted mb-0">{{ slide.layout }} Layout</p>
+            </div>
+            <div>
+                <a href="{{ url_for('analyze', filename=filename) }}" class="btn btn-outline-secondary me-2">
+                    <i class="fas fa-arrow-left"></i> Back to Analysis
+                </a>
+                <!-- Navigation -->
+                {% if slide.slide_number > 1 %}
+                <a href="{{ url_for('slide_detail', filename=filename, slide_number=slide.slide_number-1) }}" class="btn btn-outline-primary me-1">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+                {% endif %}
+                <span class="badge bg-primary">{{ slide.slide_number }} / {{ total_slides }}</span>
+                {% if slide.slide_number < total_slides %}
+                <a href="{{ url_for('slide_detail', filename=filename, slide_number=slide.slide_number+1) }}" class="btn btn-outline-primary ms-1">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Slide Overview -->
+        <div class="row mb-4">
+            <div class="col-md-3 mb-3">
+                <div class="card bg-primary text-white">
+                    <div class="card-body text-center">
+                        <i class="fas fa-shapes fa-2x mb-2"></i>
+                        <h4>{{ slide.shape_count }}</h4>
+                        <p class="mb-0">Total Shapes</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card bg-success text-white">
+                    <div class="card-body text-center">
+                        <i class="fas fa-font fa-2x mb-2"></i>
+                        <h4>{{ slide.text_count }}</h4>
+                        <p class="mb-0">Text Elements</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card bg-info text-white">
+                    <div class="card-body text-center">
+                        <i class="fas fa-images fa-2x mb-2"></i>
+                        <h4>{{ slide.image_count }}</h4>
+                        <p class="mb-0">Images</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card bg-warning text-white">
+                    <div class="card-body text-center">
+                        <i class="fas fa-palette fa-2x mb-2"></i>
+                        <h4>{{ slide.colors|length }}</h4>
+                        <p class="mb-0">Colors Used</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide Colors -->
+        {% if slide.colors %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-palette"></i> Slide Color Palette
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="color-palette-container">
+                    {% for color in slide.colors %}
+                        {% if color %}
+                        <div class="color-swatch" style="background-color: {{ color }};" title="{{ color }}" data-color="{{ color }}">
+                            <span class="color-code">{{ color }}</span>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Text Content -->
+        {% if slide.texts %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-align-left"></i> Text Content
+                </h5>
+            </div>
+            <div class="card-body">
+                {% for text in slide.texts %}
+                <div class="text-item border-bottom pb-3 mb-3">
+                    <div class="text-content p-3 bg-light rounded">
+                        "{{ text }}"
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Images Details -->
+        {% if slide.images %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-images"></i> Image Analysis
+                </h5>
+            </div>
+            <div class="card-body">
+                {% for image_shape in slide.images %}
+                    {% if image_shape.image_info and not image_shape.image_info.error %}
+                    <div class="image-analysis border rounded p-3 mb-3">
+                        <div class="row">
+                            <div class="col-md-4">
+                                {% if image_shape.image_info.base64 %}
+                                <img src="data:image/png;base64,{{ image_shape.image_info.base64 }}" 
+                                     class="img-fluid rounded" alt="Slide image">
+                                {% endif %}
+                            </div>
+                            <div class="col-md-8">
+                                <h6>Image Properties</h6>
+                                <ul class="list-unstyled">
+                                    <li><strong>Format:</strong> {{ image_shape.image_info.format }}</li>
+                                    <li><strong>Dimensions:</strong> {{ image_shape.image_info.size[0] }} × {{ image_shape.image_info.size[1] }} px</li>
+                                    <li><strong>Color Mode:</strong> {{ image_shape.image_info.mode }}</li>
+                                    <li><strong>Average Color:</strong> 
+                                        <span class="color-mini-swatch d-inline-block" style="background-color: {{ image_shape.image_info.average_color }}; width: 20px; height: 20px; border: 1px solid #ccc;"></span>
+                                        {{ image_shape.image_info.average_color }}
+                                    </li>
+                                    <li><strong>Brightness:</strong> {{ image_shape.image_info.brightness|round(1) }}/255</li>
+                                </ul>
+                                
+                                {% if image_shape.image_info.dominant_colors %}
+                                <h6>Dominant Colors</h6>
+                                <div class="color-palette-container">
+                                    {% for color in image_shape.image_info.dominant_colors %}
+                                    <div class="color-swatch" style="background-color: {{ color }};" title="{{ color }}" data-color="{{ color }}">
+                                        <span class="color-code">{{ color }}</span>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Shape Details -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-shapes"></i> Shape Analysis
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Shape</th>
+                                <th>Type</th>
+                                <th>Position</th>
+                                <th>Size</th>
+                                <th>Colors</th>
+                                <th>Text Content</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for shape in slide.shapes %}
+                            <tr>
+                                <td>{{ shape.name }}</td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ shape.type.replace('_', ' ').title() }}</span>
+                                </td>
+                                <td>
+                                    <small>
+                                        L: {{ (shape.position.left / 12700)|round(1) }}"<br>
+                                        T: {{ (shape.position.top / 12700)|round(1) }}"
+                                    </small>
+                                </td>
+                                <td>
+                                    <small>
+                                        W: {{ (shape.position.width / 12700)|round(1) }}"<br>
+                                        H: {{ (shape.position.height / 12700)|round(1) }}"
+                                    </small>
+                                </td>
+                                <td>
+                                    {% if shape.colors %}
+                                    <div class="color-mini-palette">
+                                        {% for color in shape.colors[:3] %}
+                                        <div class="color-mini-swatch" style="background-color: {{ color }};" title="{{ color }}"></div>
+                                        {% endfor %}
+                                    </div>
+                                    {% else %}
+                                    <span class="text-muted">None</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if shape.text %}
+                                        {% for text_info in shape.text[:2] %}
+                                        <small>"{{ text_info.content[:50] }}{% if text_info.content|length > 50 %}...{% endif %}"</small><br>
+                                        {% endfor %}
+                                    {% else %}
+                                    <span class="text-muted">No text</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fonts Used in This Slide -->
+        {% if slide.fonts %}
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-font"></i> Fonts in This Slide
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for font in slide.fonts %}
+                    <div class="col-md-3 mb-2">
+                        <div class="border rounded p-2 text-center" style="font-family: '{{ font }}', sans-serif;">
+                            {{ font }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Color swatch click handler
+    document.querySelectorAll('.color-swatch').forEach(function(swatch) {
+        swatch.addEventListener('click', function() {
+            const color = this.dataset.color;
+            navigator.clipboard.writeText(color).then(function() {
+                // Show tooltip
+                const tooltip = new bootstrap.Tooltip(swatch, {
+                    title: 'Copied to clipboard!',
+                    trigger: 'manual'
+                });
+                tooltip.show();
+                setTimeout(() => tooltip.hide(), 1000);
+            });
+        });
+    });
+
+    // Keyboard navigation
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'ArrowLeft' && {{ slide.slide_number }} > 1) {
+            window.location.href = "{{ url_for('slide_detail', filename=filename, slide_number=slide.slide_number-1) }}";
+        } else if (e.key === 'ArrowRight' && {{ slide.slide_number }} < {{ total_slides }}) {
+            window.location.href = "{{ url_for('slide_detail', filename=filename, slide_number=slide.slide_number+1) }}";
+        }
+    });
+});
+</script>
+{% endblock %}

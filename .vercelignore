@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+uploads/
+analysis_results/
+test.py
+run.py
+.env
+.DS_Store
+*.log
+node_modules/
+.git/
+README.md
+deploy.sh
