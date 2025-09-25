@@ -1,38 +1,16 @@
-# PPT AI Analyzer
+# PowerPoint AI Analyzer 🎯
 
-A comprehensive PowerPoint presentation analysis tool powered by AI that extracts detailed information about colors, images, fonts, layouts, and provides intelligent insights for presentation improvement.
+A comprehensive Gradio-based application that analyzes PowerPoint presentations using AI to extract detailed insights about design, content, colors, images, and provides intelligent recommendations.
 
-## Features
+## Features ✨
 
-### 🎨 Comprehensive Analysis
-- **Color Analysis**: Extract and analyze color palettes, dominant colors from images, and color psychology insights
-- **Image Detection**: Identify images, analyze visual content, extract dominant colors, and image properties
-- **Font Analysis**: Detect fonts used, analyze typography consistency
-- **Layout Analysis**: Understand slide layouts and structure
-- **Shape Analysis**: Detailed analysis of all shapes including position, size, and formatting
-
-### 🧠 AI-Powered Insights
-- Content topic identification
-- Design quality scoring (1-10 scale)
-- Professional presentation assessment
-- Actionable improvement recommendations
-- Slide classification (Title, Content, Visual-heavy, etc.)
-
-### 🌐 Modern Web Interface
-- Beautiful, responsive web UI
-- Drag-and-drop file upload
-- Interactive color palette display
-- Detailed slide-by-slide analysis
-- Real-time progress indication
-- Mobile-friendly design
-
-### 📊 Detailed Reporting
-- Presentation metadata and dimensions
-- Color palette with hex codes (click to copy)
-- Image analysis with dominant colors
-- Font usage statistics
-- Shape positioning and formatting details
-- Statistical summaries and visualizations
+- **Comprehensive Analysis**: Deep dive into slide layouts, text content, and visual elements
+- **Color Intelligence**: Extract and analyze color palettes with dominant color detection  
+- **Image Processing**: Advanced image analysis with color extraction and properties
+- **AI-Powered Insights**: Groq LLM integration for intelligent presentation analysis
+- **Gradio Interface**: Simple, intuitive web interface with file upload
+- **Serverless Optimized**: Lightweight design perfect for Vercel deployment
+- **Real-time Processing**: Upload and analyze presentations instantly
 
 ## Project Structure
 
@@ -40,24 +18,17 @@ A comprehensive PowerPoint presentation analysis tool powered by AI that extract
 PPTAI/
 ├── app.py                          # Main Flask application
 ├── requirements.txt                # Python dependencies
+├── api/
+│   └── gradio_app.py              # Main Gradio application
 ├── src/
 │   ├── analyzers/
 │   │   ├── detailed_analyzer.py    # Comprehensive PPT analysis
+│   │   ├── detailed_analyzer_serverless.py  # Serverless optimized version
 │   │   └── groq_analyzer.py        # AI-powered insights
 │   └── utils/
 │       └── helpers.py              # Utility functions
-├── templates/
-│   ├── base.html                   # Base template
-│   ├── index.html                  # Upload page
-│   ├── analysis.html               # Analysis results
-│   └── slide_detail.html           # Individual slide details
-├── static/
-│   ├── css/
-│   │   └── style.css               # Custom styles
-│   └── js/
-│       └── script.js               # Custom JavaScript
-├── uploads/                        # Uploaded files
-└── analysis_results/               # Saved analysis results
+├── uploads/                        # Uploaded files (temporary)
+└── vercel.json                     # Vercel deployment config
 ```
 
 ## Installation
