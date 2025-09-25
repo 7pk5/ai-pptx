@@ -120,15 +120,15 @@ function initializeUploadProgress() {
     const fileInput = document.getElementById('fileInput');
     if (!uploadForm) return;
     
-    // File size validation (4MB = 4 * 1024 * 1024 bytes)
-    const MAX_FILE_SIZE = 4 * 1024 * 1024;
+    // File size validation (1MB = 1 * 1024 * 1024 bytes for Vercel serverless)
+    const MAX_FILE_SIZE = 1 * 1024 * 1024;
     
     if (fileInput) {
         fileInput.addEventListener('change', function() {
             const file = this.files[0];
             if (file) {
                 if (file.size > MAX_FILE_SIZE) {
-                    alert(`File is too large! Maximum size is 4MB. Your file is ${(file.size / (1024 * 1024)).toFixed(2)}MB.`);
+                    alert(`File is too large! Maximum size is 1MB for Vercel serverless. Your file is ${(file.size / (1024 * 1024)).toFixed(2)}MB.`);
                     this.value = '';
                     document.getElementById('uploadBtn').disabled = true;
                     document.getElementById('fileInfo').style.display = 'none';
@@ -148,7 +148,7 @@ function initializeUploadProgress() {
         const file = fileInput.files[0];
         if (file && file.size > MAX_FILE_SIZE) {
             e.preventDefault();
-            alert('File is too large for serverless deployment. Please use a file smaller than 4MB.');
+            alert('File is too large for Vercel serverless. Please use a file smaller than 1MB.');
             return false;
         }
         

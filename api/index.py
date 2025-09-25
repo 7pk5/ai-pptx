@@ -49,9 +49,10 @@ app = Flask(__name__,
 # Use environment variable for secret key, fallback to default
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'ppt-ai-analyzer-secret-key-2024')
 
-# Configuration for Vercel - Very restrictive limits for serverless
+# Configuration for Vercel - Extremely restrictive limits for serverless
 ALLOWED_EXTENSIONS = {'pptx', 'ppt'}
-MAX_FILE_SIZE = int(os.getenv('MAX_FILE_SIZE', 4 * 1024 * 1024))  # Reduced to 4MB for serverless payload limits
+# Vercel has very strict payload limits - reducing to 1MB to be safe
+MAX_FILE_SIZE = int(os.getenv('MAX_FILE_SIZE', 1 * 1024 * 1024))  # 1MB maximum for Vercel serverless
 
 app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
 
@@ -272,10 +273,10 @@ def test_payload():
     except Exception as e:
         return jsonify({'error': str(e), 'traceback': traceback.format_exc()}), 500
 
-@app.errorhandler(413)
+@app.errorhandler(413) 
 def too_large(e):
     """Handle file too large error."""
-    return jsonify({'error': 'File is too large. Maximum file size is 4MB for serverless deployment. Please upload a smaller file.'}), 413
+    return jsonify({'error': 'File is too large. Maximum file size is 1MB for Vercel serverless. Please use a very small PowerPoint file.'}), 413
 
 @app.errorhandler(404)
 def not_found(e):

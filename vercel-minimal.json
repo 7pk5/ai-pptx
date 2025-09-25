@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/minimal.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "api/minimal.py"
+    }
+  ],
+  "functions": {
+    "api/minimal.py": {
+      "maxDuration": 15
+    }
+  },
+  "env": {
+    "PYTHONPATH": "."
+  }
+}
