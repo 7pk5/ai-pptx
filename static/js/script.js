@@ -117,9 +117,41 @@ function showCopyFeedback(element, message) {
 
 function initializeUploadProgress() {
     const uploadForm = document.getElementById('uploadForm');
+    const fileInput = document.getElementById('fileInput');
     if (!uploadForm) return;
     
-    uploadForm.addEventListener('submit', function() {
+    // File size validation (4MB = 4 * 1024 * 1024 bytes)
+    const MAX_FILE_SIZE = 4 * 1024 * 1024;
+    
+    if (fileInput) {
+        fileInput.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) {
+                if (file.size > MAX_FILE_SIZE) {
+                    alert(`File is too large! Maximum size is 4MB. Your file is ${(file.size / (1024 * 1024)).toFixed(2)}MB.`);
+                    this.value = '';
+                    document.getElementById('uploadBtn').disabled = true;
+                    document.getElementById('fileInfo').style.display = 'none';
+                    return;
+                }
+                
+                // Show file info
+                document.getElementById('fileName').textContent = file.name;
+                document.getElementById('fileSize').textContent = `(${(file.size / (1024 * 1024)).toFixed(2)}MB)`;
+                document.getElementById('fileInfo').style.display = 'block';
+                document.getElementById('uploadBtn').disabled = false;
+            }
+        });
+    }
+    
+    uploadForm.addEventListener('submit', function(e) {
+        const file = fileInput.files[0];
+        if (file && file.size > MAX_FILE_SIZE) {
+            e.preventDefault();
+            alert('File is too large for serverless deployment. Please use a file smaller than 4MB.');
+            return false;
+        }
+        
         const progressBar = document.getElementById('progressBar');
         if (!progressBar) return;
         

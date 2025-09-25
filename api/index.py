@@ -49,15 +49,22 @@ app = Flask(__name__,
 # Use environment variable for secret key, fallback to default
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'ppt-ai-analyzer-secret-key-2024')
 
-# Configuration for Vercel
+# Configuration for Vercel - Very restrictive limits for serverless
 ALLOWED_EXTENSIONS = {'pptx', 'ppt'}
-MAX_FILE_SIZE = int(os.getenv('MAX_FILE_SIZE', 10 * 1024 * 1024))  # Reduced to 10MB for serverless
+MAX_FILE_SIZE = int(os.getenv('MAX_FILE_SIZE', 4 * 1024 * 1024))  # Reduced to 4MB for serverless payload limits
 
 app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
 
 def allowed_file(filename):
     """Check if file extension is allowed."""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def validate_request_size():
+    """Validate request size before processing."""
+    content_length = request.content_length
+    if content_length and content_length > MAX_FILE_SIZE:
+        return False, f'Request too large: {content_length} bytes. Maximum allowed: {MAX_FILE_SIZE} bytes (4MB)'
+    return True, None
 
 @app.route('/')
 def index():
@@ -68,6 +75,12 @@ def index():
 def upload_file():
     """Handle file upload and redirect to analysis."""
     try:
+        # Validate request size first
+        valid_size, size_error = validate_request_size()
+        if not valid_size:
+            flash(size_error, 'error')
+            return redirect(request.url)
+            
         if not detailed_analyzer:
             flash('Analysis service unavailable', 'error')
             return redirect(request.url)
@@ -154,6 +167,11 @@ def upload_file():
 def api_analyze():
     """API endpoint for programmatic analysis."""
     try:
+        # Validate request size first
+        valid_size, size_error = validate_request_size()
+        if not valid_size:
+            return jsonify({'error': size_error}), 413
+            
         if not detailed_analyzer:
             return jsonify({'error': 'Analysis service unavailable'}), 503
             
@@ -204,13 +222,60 @@ def health_check():
     return jsonify({
         'status': 'healthy',
         'service': 'PPT AI Analyzer',
-        'version': '1.0.0'
+        'version': '1.0.0',
+        'max_file_size_mb': MAX_FILE_SIZE / (1024 * 1024)
     })
+
+@app.route('/api/limits')
+def get_limits():
+    """Get current API limits."""
+    return jsonify({
+        'max_file_size_bytes': MAX_FILE_SIZE,
+        'max_file_size_mb': MAX_FILE_SIZE / (1024 * 1024),
+        'allowed_extensions': list(ALLOWED_EXTENSIONS),
+        'serverless': True
+    })
+
+@app.route('/api/test-payload', methods=['POST'])
+def test_payload():
+    """Test endpoint to check payload size handling."""
+    try:
+        content_length = request.content_length or 0
+        
+        # Get request size info
+        result = {
+            'content_length': content_length,
+            'content_length_mb': content_length / (1024 * 1024),
+            'max_allowed_mb': MAX_FILE_SIZE / (1024 * 1024),
+            'within_limits': content_length <= MAX_FILE_SIZE,
+            'has_files': bool(request.files),
+            'file_count': len(request.files) if request.files else 0
+        }
+        
+        if request.files:
+            for key, file in request.files.items():
+                if hasattr(file, 'filename') and file.filename:
+                    # Read file size without saving
+                    file.seek(0, 2)  # Seek to end
+                    file_size = file.tell()
+                    file.seek(0)  # Reset to beginning
+                    
+                    result['file_info'] = {
+                        'filename': file.filename,
+                        'size_bytes': file_size,
+                        'size_mb': file_size / (1024 * 1024)
+                    }
+                    break
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({'error': str(e), 'traceback': traceback.format_exc()}), 500
 
 @app.errorhandler(413)
 def too_large(e):
     """Handle file too large error."""
-    return jsonify({'error': 'File is too large. Maximum file size is 10MB for serverless deployment.'}), 413
+    return jsonify({'error': 'File is too large. Maximum file size is 4MB for serverless deployment. Please upload a smaller file.'}), 413
 
 @app.errorhandler(404)
 def not_found(e):
