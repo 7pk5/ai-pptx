@@ -1,19 +1,46 @@
 import os
 import sys
-from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session
 from werkzeug.utils import secure_filename
 import json
 import tempfile
+import traceback
 
 # Add the parent directory to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# Initialize analyzers with error handling
+detailed_analyzer = None
+groq_analyzer = None
+
 try:
     from src.analyzers.detailed_analyzer_serverless import DetailedPPTAnalyzer
-except ImportError:
-    from src.analyzers.detailed_analyzer import DetailedPPTAnalyzer
-from src.analyzers.groq_analyzer import GroqAnalyzer
-from src.utils.helpers import validate_ppt_file, save_analysis_result, generate_summary_stats
+    detailed_analyzer = DetailedPPTAnalyzer()
+except ImportError as e:
+    print(f"Failed to import serverless analyzer: {e}")
+    try:
+        from src.analyzers.detailed_analyzer import DetailedPPTAnalyzer
+        detailed_analyzer = DetailedPPTAnalyzer()
+    except ImportError as e2:
+        print(f"Failed to import regular analyzer: {e2}")
+
+try:
+    from src.analyzers.groq_analyzer import GroqAnalyzer
+    groq_analyzer = GroqAnalyzer()
+except ImportError as e:
+    print(f"Failed to import Groq analyzer: {e}")
+
+try:
+    from src.utils.helpers import validate_ppt_file, save_analysis_result, generate_summary_stats
+except ImportError as e:
+    print(f"Failed to import helpers: {e}")
+    # Provide fallback functions
+    def validate_ppt_file(filepath):
+        return {"valid": True, "error": None}
+    def save_analysis_result(result, filename):
+        return True
+    def generate_summary_stats(result):
+        return {"status": "Summary stats not available"}
 
 app = Flask(__name__, 
            static_folder='../static',
@@ -24,13 +51,9 @@ app.secret_key = os.getenv('FLASK_SECRET_KEY', 'ppt-ai-analyzer-secret-key-2024'
 
 # Configuration for Vercel
 ALLOWED_EXTENSIONS = {'pptx', 'ppt'}
-MAX_FILE_SIZE = int(os.getenv('MAX_FILE_SIZE', 50 * 1024 * 1024))  # Default 50MB
+MAX_FILE_SIZE = int(os.getenv('MAX_FILE_SIZE', 10 * 1024 * 1024))  # Reduced to 10MB for serverless
 
 app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
-
-# Initialize analyzers
-detailed_analyzer = DetailedPPTAnalyzer()
-groq_analyzer = GroqAnalyzer()
 
 def allowed_file(filename):
     """Check if file extension is allowed."""
@@ -44,18 +67,23 @@ def index():
 @app.route('/upload', methods=['POST'])
 def upload_file():
     """Handle file upload and redirect to analysis."""
-    if 'file' not in request.files:
-        flash('No file selected', 'error')
-        return redirect(request.url)
-    
-    file = request.files['file']
-    
-    if file.filename == '':
-        flash('No file selected', 'error')
-        return redirect(request.url)
-    
-    if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
+    try:
+        if not detailed_analyzer:
+            flash('Analysis service unavailable', 'error')
+            return redirect(request.url)
+            
+        if 'file' not in request.files:
+            flash('No file selected', 'error')
+            return redirect(request.url)
+        
+        file = request.files['file']
+        
+        if file.filename == '':
+            flash('No file selected', 'error')
+            return redirect(request.url)
+        
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
         
         try:
             # Use temporary file for Vercel
@@ -102,30 +130,40 @@ def upload_file():
                                      filename=filename)
                 
             except Exception as e:
+                print(f"Analysis error: {traceback.format_exc()}")
                 if os.path.exists(temp_filepath):
                     os.unlink(temp_filepath)
                 flash(f'Error analyzing file: {str(e)}', 'error')
                 return redirect(request.url)
             
         except Exception as e:
+            print(f"Upload error: {traceback.format_exc()}")
             flash(f'Error uploading file: {str(e)}', 'error')
             return redirect(request.url)
-    else:
-        flash('Invalid file type. Please upload a .pptx or .ppt file', 'error')
+    
+        else:
+            flash('Invalid file type. Please upload a .pptx or .ppt file', 'error')
+            return redirect(request.url)
+    
+    except Exception as e:
+        print(f"General error: {traceback.format_exc()}")
+        flash(f'An error occurred: {str(e)}', 'error')
         return redirect(request.url)
 
 @app.route('/api/analyze', methods=['POST'])
 def api_analyze():
     """API endpoint for programmatic analysis."""
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file provided'}), 400
-    
-    file = request.files['file']
-    
-    if file.filename == '' or not allowed_file(file.filename):
-        return jsonify({'error': 'Invalid file'}), 400
-    
     try:
+        if not detailed_analyzer:
+            return jsonify({'error': 'Analysis service unavailable'}), 503
+            
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+        
+        file = request.files['file']
+        
+        if file.filename == '' or not allowed_file(file.filename):
+            return jsonify({'error': 'Invalid file'}), 400
         filename = secure_filename(file.filename)
         
         # Use temporary file
@@ -157,6 +195,7 @@ def api_analyze():
         return jsonify(result)
         
     except Exception as e:
+        print(f"API error: {traceback.format_exc()}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/health')
@@ -171,7 +210,7 @@ def health_check():
 @app.errorhandler(413)
 def too_large(e):
     """Handle file too large error."""
-    return jsonify({'error': 'File is too large. Maximum file size is 50MB.'}), 413
+    return jsonify({'error': 'File is too large. Maximum file size is 10MB for serverless deployment.'}), 413
 
 @app.errorhandler(404)
 def not_found(e):
@@ -183,10 +222,8 @@ def internal_error(e):
     """Handle 500 errors."""
     return jsonify({'error': 'Internal server error'}), 500
 
-# Vercel requires the app to be available as a WSGI application
-def handler(request, context):
-    """Vercel handler function."""
-    return app(request, context)
+# For Vercel, the app instance needs to be available at module level
+# Vercel will automatically handle the WSGI interface
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5001)

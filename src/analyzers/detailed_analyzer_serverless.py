@@ -20,10 +20,12 @@ except ImportError:
 
 try:
     import numpy as np
+    # Use headless version for serverless
     import cv2
     OPENCV_AVAILABLE = True
 except ImportError:
     OPENCV_AVAILABLE = False
+    np = None
 
 try:
     import webcolors
@@ -39,6 +41,8 @@ class DetailedPPTAnalyzer:
         self.extracted_images = []
         self.color_palette = []
         self.fonts_used = set()
+        self.max_images = 10  # Limit images for serverless
+        self.max_colors = 50  # Limit colors for memory
         
     def parse_ppt_detailed(self, file_path: str) -> Dict[str, Any]:
         """Parse PPT with comprehensive details extraction."""
